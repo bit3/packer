@@ -1,7 +1,7 @@
 CSS/JS distribution packer
 ==========================
 
-Add a `dist.yml` to your repository and run the `pack` command.
+Add a `package.yml` to your repository and run the `pack` command.
 
 Configuration
 -------------
