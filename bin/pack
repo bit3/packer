@@ -1,0 +1,48 @@
+#!/usr/bin/env php
+<?php
+
+// installed as project
+if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+	require(__DIR__ . '/../vendor/autoload.php');
+}
+// installed in vendor
+else if (file_exists(__DIR__ . '/../../../autoload.php')) {
+	require(__DIR__ . '/../../../autoload.php');
+}
+else {
+	echo "could not found autoload.php, have you run composer install?";
+	exit;
+}
+
+use Symfony\Component\Console\Application as SymfonyApplication;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Command\HelpCommand;
+use Symfony\Component\Console\Command\ListCommand;
+use Symfony\Component\Console\Input\InputDefinition;
+use Symfony\Component\Console\Input\InputInterface;
+use Bit3\Builder\PackCommand;
+
+class Application extends SymfonyApplication
+{
+	protected function getCommandName(InputInterface $input)
+	{
+		return 'pack';
+	}
+
+	protected function getDefaultCommands()
+	{
+		$defaultCommands = parent::getDefaultCommands();
+		$defaultCommands[] = new PackCommand();
+		return $defaultCommands;
+	}
+
+	public function getDefinition()
+	{
+		$inputDefinition = parent::getDefinition();
+		$inputDefinition->setArguments();
+		return $inputDefinition;
+	}
+}
+
+$application = new Application();
+$application->run();

@@ -1,0 +1,39 @@
+{
+	"name": "bit3/packer",
+	"description": "Pack JS and CSS distribution with compile and minify support using the Assetic framework.",
+	"keywords": ["javascript", "css"],
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Tristan Lins",
+			"email": "tristan.lins@bit3.de",
+			"homepage": "http://bit3.de",
+			"role": "Developer"
+		}
+	],
+	"support": {
+		"email": "info@bit3.de",
+		"issues": "https://github.com/bit3/packer/issues",
+		"source": "https://github.com/bit3/packer"
+	},
+	"require": {
+		"php": ">=5.4",
+		"symfony/console": "2.4.*",
+		"symfony/yaml": "2.4.*",
+		"kriswallsmith/assetic": "~1.1",
+		"bit3/assetic-css-crush": "*"
+	},
+	"autoload": {
+		"psr-4": {
+			"Bit3\\Builder\\": "src"
+		}
+	},
+	"bin": [
+		"bin/pack"
+	],
+	"extra": {
+		"branch-alias": {
+			"dev-master": "1.0.x-dev"
+		}
+	}
+}

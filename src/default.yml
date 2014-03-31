@@ -1,0 +1,69 @@
+config:
+    java-path: "/usr/bin/java"
+    ruby-path: ~
+    node-path: "/usr/bin/node"
+    node-paths: []
+
+    closure-jar: "%lib%/closure-compiler-2014-03-04.jar"
+    yui-jar: "%lib%/yui-compressor-2.4.7.jar"
+    yui-jar: "%lib%/yui-compressor-2.4.7.jar"
+
+    sass-path: "/usr/bin/sass"
+    compass-path: "/usr/bin/compass"
+    cssembed-jar: "%lib%/cssembed-0.4.5.jar"
+    uglifycss-path: "/usr/bin/uglifycss"
+    uglifyjs-path: "/usr/bin/uglifyjs"
+
+filter:
+    closure:
+        class: Assetic\Filter\GoogleClosure\CompilerJarFilter
+        arguments: ["%closure-jar%", "%java-path%"]
+    sass:
+        class: Assetic\Filter\Sass\SassFilter
+        arguments: ["%sass-path%", "%ruby-path%"]
+        unixNewlines: true
+    scss:
+        class: Assetic\Filter\Sass\ScssFilter
+        arguments: ["%sass-path%", "%ruby-path%"]
+        unixNewlines: true
+    yui-css:
+        class: Assetic\Filter\Yui\CssCompressorFilter
+        arguments: ["%yui-jar%", "%java-path%"]
+    yui-js:
+        class: Assetic\Filter\Yui\JsCompressorFilter
+        arguments: ["%yui-jar%", "%java-path%"]
+    compass:
+        class: Assetic\Filter\CompassFilter
+        arguments: ["%compass-path%", "%ruby-path%"]
+        unixNewlines: true
+    cssembed:
+        class: Assetic\Filter\CssEmbedFilter
+        arguments: ["%cssembed-jar%", "%java-path%"]
+    cssimport:
+        class: Assetic\Filter\CssImportFilter
+    cssmin:
+        class: Assetic\Filter\CssMinFilter
+    cssrewrite:
+        class: Assetic\Filter\CssRewriteFilter
+    jsmin:
+        class: Assetic\Filter\JSMinFilter
+    jsmin+:
+        class: Assetic\Filter\JSMinPlusFilter
+    less:
+        class: Assetic\Filter\LessFilter
+        arguments: ["%node-path%", "%node-paths%"]
+    lessphp:
+        class: Assetic\Filter\LessphpFilter
+    phpcssembed:
+        class: Assetic\Filter\PhpCssEmbedFilter
+    phpscss:
+        class: Assetic\Filter\ScssphpFilter
+    uglify-css:
+        class: Assetic\Filter\UglifyCssFilter
+        arguments: ["%uglifycss-path%", "%node-path%"]
+    uglify-js:
+        class: Assetic\Filter\UglifyJs2Filter
+        arguments: ["%uglifyjs-path%", "%node-path%"]
+    uglify-js2:
+        class: Assetic\Filter\UglifyJs2Filter
+        arguments: ["%uglifyjs-path%", "%node-path%"]
