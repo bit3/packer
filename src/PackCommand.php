@@ -364,14 +364,6 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 			$output->writeln(sprintf('build package <comment>%s</comment>', $package->getPathname()));
 		}
 
-		if (count($package->getFilters()) && $output->getVerbosity() >= OutputInterface::VERBOSITY_DEBUG) {
-			$output->writeln('  ~ filters:');
-
-			foreach ($package->getFilters() as $filterName => $filter) {
-				$output->writeln(sprintf('    - <comment>%s</comment> [%s]', $filterName, get_class($filter)));
-			}
-		}
-
 		$asset = $this->buildAssetCollection($package, $output);
 		$asset->setTargetPath($package->getPathname());
 		$buffer = $asset->dump();
@@ -395,15 +387,27 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 	 *
 	 * @return AssetCollection
 	 */
-	protected function buildAssetCollection(Package $package, OutputInterface $output)
+	protected function buildAssetCollection(Package $package, OutputInterface $output, $indention = '')
 	{
+		if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
+			$output->writeln(sprintf('%s* build collection from <comment>%s</comment>', $indention, $package->getName()));
+		}
+
+		if (count($package->getFilters()) && $output->getVerbosity() >= OutputInterface::VERBOSITY_DEBUG) {
+			$output->writeln(sprintf('%s  ~ filters:', $indention));
+
+			foreach ($package->getFilters() as $filterName => $filter) {
+				$output->writeln(sprintf('%s    - <comment>%s</comment> [%s]', $indention, $filterName, get_class($filter)));
+			}
+		}
+
 		if ($package->getExtends()) {
 			if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
-				$output->writeln(sprintf('* extend package <comment>%s</comment>', $package->getExtends()));
+				$output->writeln(sprintf('%s  ~ extend package <comment>%s</comment>', $indention, $package->getExtends()));
 			}
 
 			$extendPackage = $this->packages[$package->getExtends()];
-			$assets        = $this->buildAssetCollection($extendPackage, $output);
+			$assets        = $this->buildAssetCollection($extendPackage, $output, $indention . '    ');
 
 			if (count($package->getFilters())) {
 				$assets->clearFilters();
@@ -420,8 +424,12 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 		if ($package->getFiles()) {
 			foreach ($package->getFiles() as $file) {
 				if ($file instanceof PackageFile) {
+					if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
+						$output->writeln(sprintf('%s  + add collection <comment>%s</comment>', $indention, $file->getPackageName()));
+					}
+
 					$mergePackage = $this->packages[$file->getPackageName()];
-					$asset = $this->buildAssetCollection($mergePackage, $output);
+					$asset = $this->buildAssetCollection($mergePackage, $output, $indention . '    ');
 
 					foreach ($file->getFilters() as $filter) {
 						$asset->ensureFilter($filter);
@@ -429,21 +437,21 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 				}
 				else if ($file instanceof Remotefile) {
 					if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
-						$output->writeln(sprintf('+ add remote file <comment>%s</comment>', $file->getUrl()));
+						$output->writeln(sprintf('%s  + add remote file <comment>%s</comment>', $indention, $file->getUrl()));
 					}
 
 					$asset = new HttpAsset($file->getUrl(), $file->getFilters());
 				}
 				else if ($file instanceof StringFile) {
 					if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
-						$output->writeln('+ add <comment>string</comment>');
+						$output->writeln(sprintf('%s  + add <comment>string</comment>', $indention));
 					}
 
 					$asset = new StringAsset($file->getContent(), $file->getFilters());
 				}
 				else if ($file instanceof LocalFile) {
 					if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
-						$output->writeln(sprintf('+ add local file <comment>%s</comment>', $file->getPathname()));
+						$output->writeln(sprintf('%s  + add local file <comment>%s</comment>', $indention, $file->getPathname()));
 					}
 
 					$asset = new FileAsset($file->getPathname(), $file->getFilters());
@@ -453,10 +461,10 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 				}
 
 				if (count($file->getFilters()) && $output->getVerbosity() >= OutputInterface::VERBOSITY_DEBUG) {
-					$output->writeln('  ~ filters:');
+					$output->writeln(sprintf('%s  ~ filters:', $indention));
 
 					foreach ($file->getFilters() as $filterName => $filter) {
-						$output->writeln(sprintf('    - <comment>%s</comment> [%s]', $filterName, get_class($filter)));
+						$output->writeln(sprintf('%s    - <comment>%s</comment> [%s]', $indention, $filterName, get_class($filter)));
 					}
 				}
 
