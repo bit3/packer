@@ -22,10 +22,12 @@ filter:
         class: Assetic\Filter\Sass\SassFilter
         arguments: ["%sass-path%", "%ruby-path%"]
         unixNewlines: true
+        style: nested
     scss:
         class: Assetic\Filter\Sass\ScssFilter
         arguments: ["%sass-path%", "%ruby-path%"]
         unixNewlines: true
+        style: nested
     yui-css:
         class: Assetic\Filter\Yui\CssCompressorFilter
         arguments: ["%yui-jar%", "%java-path%"]
@@ -36,6 +38,7 @@ filter:
         class: Assetic\Filter\CompassFilter
         arguments: ["%compass-path%", "%ruby-path%"]
         unixNewlines: true
+        style: nested
     cssembed:
         class: Assetic\Filter\CssEmbedFilter
         arguments: ["%cssembed-jar%", "%java-path%"]
