@@ -30,6 +30,13 @@ use Symfony\Component\Yaml\Yaml;
 class Package
 {
 	/**
+	 * The package name.
+	 *
+	 * @var string
+	 */
+	protected $name;
+
+	/**
 	 * The package target pathname.
 	 *
 	 * @var string
@@ -64,9 +71,27 @@ class Package
 	 */
 	protected $virtual = false;
 
-	function __construct($pathname)
+	function __construct($name, $pathname)
 	{
+		$this->name     = (string) $name;
 		$this->pathname = (string) $pathname;
+	}
+
+	/**
+	 * @param string $name
+	 */
+	public function setName($name)
+	{
+		$this->name = (string) $name;
+		return $this;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getName()
+	{
+		return $this->name;
 	}
 
 	/**

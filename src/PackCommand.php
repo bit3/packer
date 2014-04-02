@@ -222,7 +222,7 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 	 */
 	protected function parsePackage($name, $config)
 	{
-		$package = new Package($name);
+		$package = new Package($name, $name);
 
 		if (isset($config['pathname'])) {
 			$package->setPathname($this->replacePlaceholders($config['pathname']));
