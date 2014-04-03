@@ -47,7 +47,103 @@ packages:
 			- @dist/other_package.css
 ```
 
+Deployment
+----------
 
+Using the "watch" feature is nice for local development, but what if you must compile local and push to a remote host?
+This may necessary when your website is placed on a shared host, without shell/compiler support.
+
+Using deployment is realy easy, first you need to define your deployment commands:
+
+```yaml
+deploy:
+	- notify-send "Build %file% finished"
+```
+
+And use the `--deploy` option to your command: `pack --deploy`
+
+After each package, the deployment will be executed. The placeholder `%file%` is replaced with the pathname of the
+package, `%package%` with the name of the package and `%deploy%` with the deployment target (which is `default` by
+default).
+
+**Output example**
+
+```
+$ pack dist/package.css --deploy
+parse configuration
++ load .../bit3/packer/src/default.yml
++ load package.yml
++ load package.local.yml
+
+build package dist/package.css
+* build collection from dist/package.css
+  ~ filters:
+    - cssrewrite [Assetic\Filter\CssRewriteFilter]
+  + add local file src/reset.css
+* write file dist/package.css
+
+deploy to notify
+  * exec notify-send "Build dist/package.css finished"
+```
+
+### Deployment targets
+
+Having one deployment target is nice for simple setups, but what if you need to deploy to multiple places depending on
+what you currently work on? One possible usage scenario is a preview and production deployment.
+
+When you add the `deploy` section, all commands will be added to the `default` deployment targets. To define multiple
+deployment targets, group the commands inside of the `deploy` section.
+
+```yaml
+deploy:
+	preview:
+		- scp %file% user@preview.example.com:/var/www/vhosts/preview.example.com/assets/
+	production:
+		- scp %file% user@example.com:/var/www/vhosts/example.com/assets/
+```
+
+Now you have two deployment targets which can be used particular by `pack --deploy preview` and
+`pack --deploy production`, or together with a single `pack --deploy preview --deploy production`.
+
+**Hint** There is simply no difference between
+
+```yaml
+deploy:
+	- <cmd>
+```
+
+and
+
+```yaml
+deploy:
+	default:
+		- <cmd>
+```
+
+**Hint** It is also possible to mix grouped and non-grouped commands:
+
+```yaml
+deploy:
+	- <cmd 1>
+	production:
+		- <cmd 2>
+```
+
+which is exactly the same as:
+
+```yaml
+deploy:
+	default:
+		- <cmd 1>
+	production:
+		- <cmd 2>
+```
+
+**Warning** If you want to deploy specific packages (`pack dist/only_this_package.css`) and deploy these to the
+`default` deployment target (`pack --deploy`), the package name may be assumed as deployment target, if you just use
+`pack --deploy dist/only_this_package.css`. Just add `default` after `--deploy`:
+`pack --deploy default dist/only_this_package.css` or simply switch the parameters:
+`pack dist/only_this_package.css --deploy`.
 
 `package.yml` reference
 -----------------------
@@ -98,4 +194,6 @@ packages:
 			# so you can merge and mixin multiple packages
 			- @dist/package.css
 			- @vendors
+
+
 ```
