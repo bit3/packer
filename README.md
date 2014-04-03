@@ -22,6 +22,33 @@ package information, while the `package.local.yml` contains paths to the binarie
 system environment, put a `package.local.yml.dist` with system environment specific settings into you repository. You
 should not overcharge the `package.yml` with system environment specific settings!
 
+Watching modifications
+----------------------
+
+A lot compilers like sass/compass have a "watch" feature. But when using chains of compilers and minifiers, this is not
+easy to automating. Use the `--watch` (`-w`) flag will cause the packer to watch for modifications on the packages.
+
+If you using importing (like the sass `@import` rule) or embedding (like the cssembed filter), you may want to specify
+which files must be watched?! Simply add a `watch` block into your `package.yml`, directly after the `files` block and
+specify the files or directories to watch.
+
+```yaml
+packages:
+	dist/package.css:
+		files:
+			# remind that all files here will be watched anyway
+			- reset.css
+		watch:
+			# watch a single file
+			- src/file_to_watch.css
+			# directories are also allowed
+			- assets/images/
+			# or watch all watches from another package
+			- @dist/other_package.css
+```
+
+
+
 `package.yml` reference
 -----------------------
 
@@ -41,6 +68,15 @@ packages:
 
 			# add a file with filters
 			- [src/base.scss, [scss]]
+		watch:
+			# watch a file
+			- src/file.css
+
+			# watch a directory
+			- assets/images/
+
+			# watch files from another package
+			- @dist/other_package.css
 
 	dist/package.min.css:
 		# extend another package
