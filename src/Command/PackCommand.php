@@ -308,26 +308,26 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 	 *
 	 * @return mixed
 	 */
-	protected function replacePlaceholders($input)
+	protected function replacePlaceholders($input, array $additionalData = [])
 	{
 		// replace placeholders in array values
 		if (is_array($input)) {
 			foreach ($input as $key => $value) {
-				$input[$key] = $this->replacePlaceholders($value);
+				$input[$key] = $this->replacePlaceholders($value, $additionalData);
 			}
 		}
 
 		// replace single placeholders, this may also return a non-string value
 		else if (preg_match('~^%([^%]+)%$~', $input, $matches)) {
-			$input = $this->replacePlaceholder($matches[1]);
+			$input = $this->replacePlaceholder($matches[1], $additionalData);
 		}
 
 		// replace multiple placeholders in a string
 		else {
 			$input = preg_replace_callback(
 				'~%([^%]+)%~',
-				function ($matches) {
-					return $this->replacePlaceholder($matches[1]);
+				function ($matches) use ($additionalData) {
+					return $this->replacePlaceholder($matches[1], $additionalData);
 				},
 				$input
 			);
@@ -347,7 +347,7 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 	 *
 	 * @return mixed
 	 */
-	protected function replacePlaceholder($key)
+	protected function replacePlaceholder($key, array $additionalData)
 	{
 		if ($key == 'cwd') {
 			return getcwd();
@@ -356,10 +356,13 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 			return dirname(dirname(__DIR__)) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR;
 		}
 		else if (isset($this->config[$key])) {
-			return $this->replacePlaceholders($this->config[$key]);
+			return $this->replacePlaceholders($this->config[$key], $additionalData);
 		}
 		else if (isset($this->filters[$key])) {
 			return $this->filters[$key];
+		}
+		else if (isset($additionalData[$key])) {
+			return $this->replacePlaceholders($additionalData[$key], $additionalData);
 		}
 		return null;
 	}
