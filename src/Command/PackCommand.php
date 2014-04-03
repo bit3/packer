@@ -23,6 +23,7 @@ use Bit3\Builder\Meta\StringFile;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Assetic\Asset\AssetCollection;
 use Assetic\Asset\FileAsset;
@@ -32,6 +33,7 @@ use Assetic\Filter\Sass\ScssFilter;
 use Assetic\Filter\Yui\CssCompressorFilter;
 use Assetic\Filter\Yui\JsCompressorFilter;
 use Assetic\Filter\CssCrushFilter;
+use Symfony\Component\Process\Process;
 use Symfony\Component\Yaml\Yaml;
 
 class PackCommand extends \Symfony\Component\Console\Command\Command
@@ -50,6 +52,11 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 	 * @var Package[]
 	 */
 	protected $packages = [];
+
+	/**
+	 * @var string
+	 */
+	protected $deploy = ['default' => []];
 
 	protected function configure()
 	{
@@ -73,6 +80,12 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 			'w',
 			InputOption::VALUE_NONE,
 			'Watch files for modifications and rebuild automatically.'
+		);
+		$this->addOption(
+			'deploy',
+			'd',
+			InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
+			'Deploy after packing.'
 		);
 		$this->addArgument(
 			'package',
@@ -155,6 +168,17 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 		if (isset($config['packages']) && is_array($config['packages'])) {
 			foreach ($config['packages'] as $packageName => $packageConfig) {
 				$this->parsePackage($packageName, $packageConfig);
+			}
+		}
+
+		if (isset($config['deploy']) && is_array($config['deploy'])) {
+			foreach ($config['deploy'] as $key => $value) {
+				if (is_array($value)) {
+					$this->deploy[$key] = $value;
+				}
+				else {
+					$this->deploy['default'][] = $value;
+				}
 			}
 		}
 	}
@@ -415,7 +439,7 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 
 					foreach ($packages as $package) {
 						try {
-							$this->buildPackage($package, $output);
+							$this->buildPackage($package, $input, $output);
 						}
 						catch (\Exception $e) {
 							$this->getApplication()->renderException($e, $output);
@@ -498,11 +522,11 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 				continue;
 			}
 
-			$this->buildPackage($package, $output);
+			$this->buildPackage($package, $input, $output);
 		}
 	}
 
-	protected function buildPackage(Package $package, OutputInterface $output)
+	protected function buildPackage(Package $package, InputInterface $input, OutputInterface $output)
 	{
 		if ($output->getVerbosity() >= OutputInterface::VERBOSITY_NORMAL) {
 			$output->writeln(sprintf('build package <comment>%s</comment>', $package->getPathname()));
@@ -520,6 +544,58 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 
 		if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
 			$output->writeln('');
+		}
+
+		$deploymentTargets = $input->getOption('deploy');
+
+		foreach ($deploymentTargets as $deploymentTarget) {
+			if (!$deploymentTarget) {
+				$deploymentTarget = 'default';
+			}
+
+			if (isset($this->deploy[$deploymentTarget])) {
+				if ($output->getVerbosity() >= OutputInterface::VERBOSITY_NORMAL) {
+					$output->writeln(sprintf('deploy to <comment>%s</comment>', $deploymentTarget));
+				}
+
+				if ($output->getVerbosity() >= OutputInterface::VERBOSITY_DEBUG) {
+					$outputCallback = function ($type, $buffer) use ($output) {
+						if (Process::ERR === $type && $output instanceof ConsoleOutputInterface) {
+							$output->getErrorOutput()->write($buffer);
+						}
+						else {
+							$output->write($buffer);
+						}
+					};
+				}
+				else {
+					$outputCallback = function () {
+						// no op
+					};
+				}
+
+				foreach ($this->deploy[$deploymentTarget] as $command) {
+					$command = $this->replacePlaceholders(
+						$command,
+						[
+							'package' => $package->getName(),
+							'file'    => $package->getPathname(),
+							'deploy'  => $deploymentTarget,
+						]
+					);
+
+					if ($output->getVerbosity() >= OutputInterface::VERBOSITY_DEBUG) {
+						$output->writeln(sprintf('  * exec <comment>%s</comment>', $command));
+					}
+
+					$process = new Process($command);
+					$process->run($outputCallback);
+				}
+
+				if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
+					$output->writeln('');
+				}
+			}
 		}
 	}
 
