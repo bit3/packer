@@ -394,11 +394,11 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 			$this->addWatches($package, $package, $mapping, $watches, $inotify, $output);
 		}
 
-		if ($output->getVerbosity() >= OutputInterface::VERBOSITY_NORMAL) {
-			$output->writeln('polling');
-		}
-
 		while (true) {
+			if ($output->getVerbosity() >= OutputInterface::VERBOSITY_NORMAL) {
+				$output->writeln('* <info>waiting for modifications</info>');
+			}
+
 			$events = inotify_read($inotify);
 
 			if (is_array($events)) {
