@@ -10,12 +10,17 @@ There are 3 configuration files.
 
 The [`default.yml`](src/default.yml) contains the default configuration.
 
-The `package.yml` contains the package configuration, for your project.
+The `package.yml` contains the package configuration, for your project. This one should be added to your repository.
 
-The `package.local.yml` contains system / environment specific configuration (like paths to binaries).
+The `package.local.yml` contains system / environment specific configuration (like paths to binaries). This one should
+not be added to your repository.
 
 They will be loaded in this order and merged into each other. That means in general you `package.yml` contains the
 package information, while the `package.local.yml` contains paths to the binaries on your system.
+
+**Convenience:** If you want to provide a `package.local.yml` that works for your team, for example all use the same
+system environment, put a `package.local.yml.dist` with system environment specific settings into you repository. You
+should not overcharge the `package.yml` with system environment specific settings!
 
 `package.yml` reference
 -----------------------
