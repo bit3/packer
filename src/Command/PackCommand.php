@@ -426,15 +426,35 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 		}
 	}
 
-	protected function addWatches(Package $rootPackage, Package $package, &$mapping, &$watches, $inotify, OutputInterface $output)
-	{
+	protected function addWatches(
+		Package $rootPackage,
+		Package $package,
+		&$mapping,
+		&$watches,
+		$inotify,
+		OutputInterface $output
+	) {
 		if ($package->getExtends()) {
-			$this->addWatches($rootPackage, $this->packages[$package->getExtends()], $mapping, $watches, $inotify, $output);
+			$this->addWatches(
+				$rootPackage,
+				$this->packages[$package->getExtends()],
+				$mapping,
+				$watches,
+				$inotify,
+				$output
+			);
 		}
 
 		foreach (array_merge($package->getFiles(), $package->getWatches()) as $file) {
 			if ($file instanceof PackageFile) {
-				$this->addWatches($rootPackage, $this->packages[$file->getPackageName()], $mapping, $watches, $inotify, $output);
+				$this->addWatches(
+					$rootPackage,
+					$this->packages[$file->getPackageName()],
+					$mapping,
+					$watches,
+					$inotify,
+					$output
+				);
 			}
 			else if ($file instanceof LocalFile) {
 				$pathname = $file->getPathname();
