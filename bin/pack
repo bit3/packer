@@ -20,7 +20,7 @@ use Symfony\Component\Console\Command\HelpCommand;
 use Symfony\Component\Console\Command\ListCommand;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputInterface;
-use Bit3\Builder\PackCommand;
+use Bit3\Builder\Command\PackCommand;
 
 class Application extends SymfonyApplication
 {

@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace Bit3\Builder;
+namespace Bit3\Builder\Meta;
 
 use Assetic\Filter\CssRewriteFilter;
 use Assetic\Filter\FilterInterface;
@@ -27,14 +27,14 @@ use Assetic\Filter\Yui\JsCompressorFilter;
 use Assetic\Filter\CssCrushFilter;
 use Symfony\Component\Yaml\Yaml;
 
-class LocalFile implements File
+class StringFile implements File
 {
 	/**
-	 * The file pathname.
+	 * The content.
 	 *
 	 * @var string
 	 */
-	protected $pathname;
+	protected $content;
 
 	/**
 	 * File specific filters.
@@ -43,21 +43,21 @@ class LocalFile implements File
 	 */
 	protected $filters = [];
 
-	function __construct($pathname, array $filters = [])
+	function __construct($content, array $filters = [])
 	{
-		$this->pathname = (string) $pathname;
+		$this->content = (string) $content;
 		$this->filters  = $filters;
 	}
 
-	public function setPathname($pathname)
+	public function setContent($pathname)
 	{
-		$this->pathname = (string) $pathname;
+		$this->content = (string) $pathname;
 		return $this;
 	}
 
-	public function getPathname()
+	public function getContent()
 	{
-		return $this->pathname;
+		return $this->content;
 	}
 
 	public function addFilter(FilterInterface $filter, $name)

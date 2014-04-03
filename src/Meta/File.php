@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace Bit3\Builder;
+namespace Bit3\Builder\Meta;
 
 use Assetic\Filter\FilterInterface;
 

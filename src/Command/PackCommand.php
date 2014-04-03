@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace Bit3\Builder;
+namespace Bit3\Builder\Command;
 
 use Assetic\Asset\HttpAsset;
 use Assetic\Filter\CssRewriteFilter;

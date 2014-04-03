@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace Bit3\Builder;
+namespace Bit3\Builder\Meta;
 
 use Assetic\Filter\CssRewriteFilter;
 use Assetic\Filter\FilterInterface;
@@ -63,6 +63,13 @@ class Package
 	 * @var File[]
 	 */
 	protected $files = [];
+
+	/**
+	 * Files that should be watched.
+	 *
+	 * @var File[]
+	 */
+	protected $watches = [];
 
 	/**
 	 * Flag that this package is virtual or not.
@@ -178,6 +185,32 @@ class Package
 	public function getFiles()
 	{
 		return $this->files;
+	}
+
+	/**
+	 * @param File $watch
+	 */
+	public function addWatch(File $watch)
+	{
+		$this->watches[] = $watch;
+		return $this;
+	}
+
+	/**
+	 * @param File[] $watches
+	 */
+	public function setWatches($watches)
+	{
+		$this->watches = $watches;
+		return $this;
+	}
+
+	/**
+	 * @return File[]
+	 */
+	public function getWatches()
+	{
+		return $this->watches;
 	}
 
 	/**
