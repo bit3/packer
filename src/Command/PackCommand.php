@@ -15,6 +15,11 @@ use Assetic\Asset\HttpAsset;
 use Assetic\Filter\CssRewriteFilter;
 use Assetic\Filter\FilterInterface;
 use Assetic\Filter\Sass\SassFilter;
+use Bit3\Builder\Meta\LocalFile;
+use Bit3\Builder\Meta\Package;
+use Bit3\Builder\Meta\PackageFile;
+use Bit3\Builder\Meta\RemoteFile;
+use Bit3\Builder\Meta\StringFile;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -63,6 +68,12 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 			'Path to local configuration file, that contain environment specific settings.',
 			'package.local.yml'
 		);
+		$this->addOption(
+			'watch',
+			'w',
+			InputOption::VALUE_NONE,
+			'Watch files for modifications and rebuild automatically.'
+		);
 		$this->addArgument(
 			'package',
 			InputArgument::IS_ARRAY | InputArgument::OPTIONAL,
@@ -74,11 +85,16 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 	{
 		$this->parseConfig($input, $output);
 
-		if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
-			$output->writeln('');
+		if ($input->getOption('watch')) {
+			$this->watchPackages($input, $output);
 		}
+		else {
+			if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
+				$output->writeln('');
+			}
 
-		$this->buildPackages($input, $output);
+			$this->buildPackages($input, $output);
+		}
 	}
 
 	/**
@@ -93,7 +109,7 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 			$output->writeln('parse configuration');
 		}
 
-		$defaultsFile = __DIR__ . DIRECTORY_SEPARATOR . 'default.yml';
+		$defaultsFile = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'default.yml';
 		$configFile   = $input->getOption('config');
 		$localFile    = $input->getOption('local');
 
@@ -244,7 +260,7 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 
 				$file = $fileConfig[0];
 				if ($file[0] == '@') {
-					$file =  new PackageFile(substr($file, 1));
+					$file = new PackageFile(substr($file, 1));
 				}
 				else if (preg_match('~^\w+:~', $file)) {
 					$file = new RemoteFile($file);
@@ -264,6 +280,19 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 				}
 
 				$package->addFile($file);
+			}
+		}
+
+		if (isset($config['watch'])) {
+			foreach ($this->replacePlaceholders($config['watch']) as $file) {
+				if ($file[0] == '@') {
+					$file = new PackageFile(substr($file, 1));
+				}
+				else {
+					$file = new LocalFile($file);
+				}
+
+				$package->addWatch($file);
 			}
 		}
 
@@ -324,7 +353,7 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 			return getcwd();
 		}
 		else if ($key == 'lib') {
-			return dirname(__DIR__) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR;
+			return dirname(dirname(__DIR__)) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR;
 		}
 		else if (isset($this->config[$key])) {
 			return $this->replacePlaceholders($this->config[$key]);
@@ -333,6 +362,98 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 			return $this->filters[$key];
 		}
 		return null;
+	}
+
+	protected function watchPackages(InputInterface $input, OutputInterface $output)
+	{
+		if (!function_exists('inotify_init')) {
+			throw new \RuntimeException('Watch require inotify support, please install the inotify extension http://php.net/inotify');
+		}
+
+		$packageNames = $input->getArgument('package');
+
+		if (empty($packageNames)) {
+			$packageNames = array_keys($this->packages);
+		}
+
+		$inotify = inotify_init();
+		$watches = [];
+		$mapping = [];
+
+		foreach ($packageNames as $packageName) {
+			if (!isset($this->packages[$packageName])) {
+				throw new \RuntimeException('The package "' . $packageName . '" does not exist');
+			}
+
+			if ($output->getVerbosity() >= OutputInterface::VERBOSITY_NORMAL) {
+				$output->writeln(sprintf('* start watching package <comment>%s</comment>', $packageName));
+			}
+
+			$package = $this->packages[$packageName];
+
+			$this->addWatches($package, $package, $mapping, $watches, $inotify, $output);
+		}
+
+		if ($output->getVerbosity() >= OutputInterface::VERBOSITY_NORMAL) {
+			$output->writeln('polling');
+		}
+
+		while (true) {
+			$events = inotify_read($inotify);
+
+			if (is_array($events)) {
+				foreach ($events as $event) {
+					$pathname = $watches[$event['wd']];
+					$packages = $mapping[$pathname];
+
+					if ($output->getVerbosity() >= OutputInterface::VERBOSITY_NORMAL) {
+						$output->writeln(sprintf('modification on <comment>%s</comment> detected', $pathname));
+					}
+
+					foreach ($packages as $package) {
+						try {
+							$this->buildPackage($package, $output);
+						}
+						catch (\Exception $e) {
+							$this->getApplication()->renderException($e, $output);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	protected function addWatches(Package $rootPackage, Package $package, &$mapping, &$watches, $inotify, OutputInterface $output)
+	{
+		if ($package->getExtends()) {
+			$this->addWatches($rootPackage, $this->packages[$package->getExtends()], $mapping, $watches, $inotify, $output);
+		}
+
+		foreach (array_merge($package->getFiles(), $package->getWatches()) as $file) {
+			if ($file instanceof PackageFile) {
+				$this->addWatches($rootPackage, $this->packages[$file->getPackageName()], $mapping, $watches, $inotify, $output);
+			}
+			else if ($file instanceof LocalFile) {
+				$pathname = $file->getPathname();
+
+				if (isset($mapping[$pathname])) {
+					if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
+						$output->writeln(sprintf('  + watch <comment>%s</comment>', $pathname));
+					}
+
+					$mapping[$pathname][] = $rootPackage;
+				}
+				else {
+					if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
+						$output->writeln(sprintf('  + watch <comment>%s</comment>', $pathname));
+					}
+
+					$watchDescriptor           = inotify_add_watch($inotify, $pathname, IN_CLOSE_WRITE);
+					$mapping[$pathname]        = [$rootPackage];
+					$watches[$watchDescriptor] = $pathname;
+				}
+			}
+		}
 	}
 
 	protected function buildPackages(InputInterface $input, OutputInterface $output)
@@ -397,7 +518,9 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 			$output->writeln(sprintf('%s  ~ filters:', $indention));
 
 			foreach ($package->getFilters() as $filterName => $filter) {
-				$output->writeln(sprintf('%s    - <comment>%s</comment> [%s]', $indention, $filterName, get_class($filter)));
+				$output->writeln(
+					sprintf('%s    - <comment>%s</comment> [%s]', $indention, $filterName, get_class($filter))
+				);
 			}
 		}
 
@@ -425,11 +548,13 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 			foreach ($package->getFiles() as $file) {
 				if ($file instanceof PackageFile) {
 					if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
-						$output->writeln(sprintf('%s  + add collection <comment>%s</comment>', $indention, $file->getPackageName()));
+						$output->writeln(
+							sprintf('%s  + add collection <comment>%s</comment>', $indention, $file->getPackageName())
+						);
 					}
 
 					$mergePackage = $this->packages[$file->getPackageName()];
-					$asset = $this->buildAssetCollection($mergePackage, $output, $indention . '    ');
+					$asset        = $this->buildAssetCollection($mergePackage, $output, $indention . '    ');
 
 					foreach ($file->getFilters() as $filter) {
 						$asset->ensureFilter($filter);
@@ -451,7 +576,9 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 				}
 				else if ($file instanceof LocalFile) {
 					if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
-						$output->writeln(sprintf('%s  + add local file <comment>%s</comment>', $indention, $file->getPathname()));
+						$output->writeln(
+							sprintf('%s  + add local file <comment>%s</comment>', $indention, $file->getPathname())
+						);
 					}
 
 					$asset = new FileAsset($file->getPathname(), $file->getFilters());
@@ -464,7 +591,9 @@ class PackCommand extends \Symfony\Component\Console\Command\Command
 					$output->writeln(sprintf('%s  ~ filters:', $indention));
 
 					foreach ($file->getFilters() as $filterName => $filter) {
-						$output->writeln(sprintf('%s    - <comment>%s</comment> [%s]', $indention, $filterName, get_class($filter)));
+						$output->writeln(
+							sprintf('%s    - <comment>%s</comment> [%s]', $indention, $filterName, get_class($filter))
+						);
 					}
 				}
 
