@@ -17,8 +17,8 @@ The `package.local.yml` contains system / environment specific configuration (li
 They will be loaded in this order and merged into each other. That means in general you `package.yml` contains the
 package information, while the `package.local.yml` contains paths to the binaries on your system.
 
-Example `package.yml`
----------------------
+`package.yml` reference
+-----------------------
 
 ```yaml
 packages:
